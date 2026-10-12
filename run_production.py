@@ -9,6 +9,19 @@ and scalable medical RAG retrieval without development server warnings.
 """
 
 import os
+import sys
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from dotenv import load_dotenv
 from waitress import serve
 from app import app

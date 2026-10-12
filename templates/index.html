@@ -76,25 +76,52 @@
         ============================================================ -->
         <section class="audience-dock">
             <div class="dock-container">
-                <div class="mode-label-group">
-                    <span class="mode-badge">AUDIENCE ENGINE</span>
-                    <span class="mode-caption">Select target persona profile for contextual response calibration:</span>
+                <!-- Control 1: Audience Engine -->
+                <div class="dock-control-group">
+                    <div class="mode-label-group">
+                        <span class="mode-badge">AUDIENCE ENGINE</span>
+                        <span class="mode-caption">Target Persona:</span>
+                    </div>
+                    <div class="segmented-control" role="tablist">
+                        <button type="button" class="segment-btn active" id="mode-patient" role="tab" aria-selected="true" data-mode="Patient">
+                            <span class="segment-icon">👤</span>
+                            <span class="segment-text">
+                                <strong>Patient Mode</strong>
+                                <small>Empathetic &bull; Plain Language</small>
+                            </span>
+                        </button>
+                        <button type="button" class="segment-btn" id="mode-clinician" role="tab" aria-selected="false" data-mode="Clinician">
+                            <span class="segment-icon">🩺</span>
+                            <span class="segment-text">
+                                <strong>Clinician Mode</strong>
+                                <small>Diagnostic Precision &bull; ICD Codes</small>
+                            </span>
+                        </button>
+                    </div>
                 </div>
-                <div class="segmented-control" role="tablist">
-                    <button type="button" class="segment-btn active" id="mode-patient" role="tab" aria-selected="true" data-mode="Patient">
-                        <span class="segment-icon">👤</span>
-                        <span class="segment-text">
-                            <strong>Patient Mode</strong>
-                            <small>Empathetic &bull; Jargon-Free &bull; 8th-Grade Level</small>
-                        </span>
-                    </button>
-                    <button type="button" class="segment-btn" id="mode-clinician" role="tab" aria-selected="false" data-mode="Clinician">
-                        <span class="segment-icon">🩺</span>
-                        <span class="segment-text">
-                            <strong>Clinician Mode</strong>
-                            <small>Diagnostic Precision &bull; ICD Codes &bull; Metrics</small>
-                        </span>
-                    </button>
+
+                <!-- Control 2: Guardrail Engine -->
+                <div class="dock-control-group">
+                    <div class="mode-label-group">
+                        <span class="mode-badge badge-guardrail">GUARDRAIL ENGINE</span>
+                        <span class="mode-caption">Compliance Policy:</span>
+                    </div>
+                    <div class="segmented-control" role="tablist">
+                        <button type="button" class="segment-btn active" id="guardrail-calibrated" role="tab" aria-selected="true" data-guardrail="Calibrated" title="Provides safe educational treatment overviews without hard refusals">
+                            <span class="segment-icon">💡</span>
+                            <span class="segment-text">
+                                <strong>Calibrated Mode</strong>
+                                <small>Educational Guidance &bull; Smart Safety</small>
+                            </span>
+                        </button>
+                        <button type="button" class="segment-btn" id="guardrail-strict" role="tab" aria-selected="false" data-guardrail="Strict" title="Requires verbatim citation from retrieved snippets; intercepts any extrapolation">
+                            <span class="segment-icon">🛡️</span>
+                            <span class="segment-text">
+                                <strong>Strict Mode</strong>
+                                <small>Verbatim Snippets &bull; Hard Refusal</small>
+                            </span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>

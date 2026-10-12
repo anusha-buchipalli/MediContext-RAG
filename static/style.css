@@ -325,6 +325,12 @@ html, body {
     gap: 20px;
 }
 
+.dock-control-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
 .mode-label-group {
     display: flex;
     align-items: center;
@@ -341,6 +347,12 @@ html, body {
     border-radius: var(--radius-sm);
     color: var(--text-muted);
     letter-spacing: 0.5px;
+}
+
+.badge-guardrail {
+    background: rgba(139, 92, 246, 0.12);
+    border-color: rgba(139, 92, 246, 0.35);
+    color: #c084fc;
 }
 
 .mode-caption {

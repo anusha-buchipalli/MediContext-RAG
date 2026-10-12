@@ -17,10 +17,23 @@ Architecture:
 import io
 import os
 import re
+import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+# Ensure UTF-8 output on Windows consoles to prevent charmap encoding crashes
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request, send_from_directory
@@ -400,7 +413,7 @@ Your Core Directives:
    - **What This Means for Your Health**
    - **Practical Questions to Ask Your Doctor**
 6. Strict Medical Safety: Never prescribe medications or issue definitive medical diagnoses. Frame information as clinical guidance to discuss with their healthcare provider.
-7. Base your answers strictly on the provided CLINICAL CONTEXT below. Do not fabricate facts.
+{mode_instruction}
 
 CLINICAL CONTEXT:
 {context}
@@ -422,7 +435,8 @@ Your Core Directives:
    - **Clinical Assessment & Pathophysiology**
    - **Diagnostic Indicators & Differential Considerations**
    - **Evidence-Based Management & Pharmacotherapy Notes**
-5. Adhere strictly to verified clinical benchmarks and the provided CLINICAL CONTEXT below. Do not fabricate laboratory metrics or therapeutic dosages.
+5. Adhere strictly to verified clinical benchmarks. Do not fabricate laboratory metrics or therapeutic dosages.
+{mode_instruction}
 
 CLINICAL CONTEXT:
 {context}
@@ -433,43 +447,74 @@ USER INQUIRY:
 CLINICAL SYNTHESIS:"""
 
 
-def build_clinical_prompt(question: str, context: str, audience: str) -> str:
-    """Builds the role-specific prompt according to the selected audience modifier."""
+def build_clinical_prompt(question: str, context: str, audience: str, guardrail_mode: str = "Calibrated") -> str:
+    """Builds the role-specific prompt according to the selected audience modifier and guardrail mode."""
+    if guardrail_mode.strip().capitalize() == "Strict":
+        mode_instruction = (
+            "COMPLIANCE POLICY: STRICT MODE (VERBATIM ONLY)\n"
+            "- Rely strictly and solely on verbatim information in the CLINICAL CONTEXT below.\n"
+            "- Do not extrapolate, infer, or mention any medications, diagnoses, or treatments not explicitly in the context.\n"
+            "- If the context is incomplete, clearly state that the provided reference context does not contain enough information."
+        )
+    else:
+        mode_instruction = (
+            "COMPLIANCE POLICY: CALIBRATED MODE (EDUCATIONAL GUIDANCE)\n"
+            "- Provide a helpful, evidence-based EDUCATIONAL OVERVIEW of standard clinical approaches and general pharmacological categories based on established guidelines.\n"
+            "- When discussing medications, describe standard therapeutic classes (e.g., hormonal therapy, insulin sensitizers) and clinical indications in general educational terms.\n"
+            "- Emphasize that all pharmaceutical treatments require clinical consultation and a prescription from an attending physician.\n"
+            "- Do NOT prescribe personalized milligram dosages or issue personal treatment regimens."
+        )
+
     if audience.strip().lower() == "clinician":
-        return CLINICIAN_PROMPT_TEMPLATE.format(context=context, question=question)
-    return PATIENT_PROMPT_TEMPLATE.format(context=context, question=question)
+        return CLINICIAN_PROMPT_TEMPLATE.format(context=context, question=question, mode_instruction=mode_instruction)
+    return PATIENT_PROMPT_TEMPLATE.format(context=context, question=question, mode_instruction=mode_instruction)
 
 
 # ==============================================================================
-# 8. POSTERIOR HALLUCINATION CHECK & COMPLIANCE GUARDRAIL
+# 8. POSTERIOR HALLUCINATION CHECK & COMPLIANCE GUARDRAIL (STRICT VS CALIBRATED)
 # ==============================================================================
 
-AUDITOR_SYSTEM_PROMPT = """You are a strict Medical Compliance & Factual Hallucination Auditor in an accredited clinical health system.
-Your responsibility is to rigorously audit whether the CANDIDATE ANSWER is fully grounded in the provided REFERENCE CONTEXT.
+AUDITOR_STRICT_PROMPT = """You are a strict Medical Compliance & Factual Hallucination Auditor in an accredited clinical health system operating in STRICT VERBATIM MODE.
+Your responsibility is to rigorously audit whether the CANDIDATE ANSWER is strictly grounded in the provided REFERENCE CONTEXT without ANY extrapolation.
 
-Verification Criteria:
-- 'PASS': The candidate answer's factual assertions, pathology explanations, or pharmaceutical references are supported by the reference context, OR it responsibly clarifies that information is limited without fabricating medical facts.
-- 'FAIL': The candidate answer invents ungrounded pharmaceutical dosages, fabricates specific laboratory metrics not present in the reference, hallucinated diagnoses contradictory to the context, or makes wild, unsupported clinical claims.
+Verification Criteria (STRICT):
+- 'PASS': The candidate answer's factual assertions are strictly substantiated by the provided reference context, OR it responsibly clarifies that information is limited.
+- 'FAIL': The candidate answer introduces any clinical claims, medications, or explanations not explicitly detailed in the reference context.
 
 You must respond in the following EXACT format:
 VERDICT: [PASS or FAIL]
 RATIONALE: [Concise 1-sentence audit summary]"""
 
 
-def verify_grounding_compliance(candidate_answer: str, reference_context: str) -> Tuple[bool, str]:
+AUDITOR_CALIBRATED_PROMPT = """You are a Medical Compliance & Factual Hallucination Auditor in an accredited clinical health system operating in CALIBRATED EDUCATIONAL MODE.
+Your responsibility is to ensure the CANDIDATE ANSWER provides safe, scientifically sound medical education without dangerous hallucinations.
+
+Verification Criteria (CALIBRATED):
+- 'PASS': The candidate answer provides safe, standard educational medical explanations, attributes concepts to clinical guidelines, responsibly disclaims that prescriptions require a physician, and does NOT prescribe personal milligram dosages or invent fake lab metrics. General recognized medical consensus is ALLOWED.
+- 'FAIL': The candidate answer prescribes dangerous unverified dosages, promotes harmful medical falsehoods, fabricates fictitious laboratory metrics, or directly contradicts the reference context.
+
+You must respond in the following EXACT format:
+VERDICT: [PASS or FAIL]
+RATIONALE: [Concise 1-sentence audit summary]"""
+
+
+def verify_grounding_compliance(candidate_answer: str, reference_context: str, guardrail_mode: str = "Calibrated") -> Tuple[bool, str]:
     """
     Conducts posterior verification on the generated response against retrieved context.
+    Supports 'Strict' (verbatim) and 'Calibrated' (safe educational) modes.
     Returns (passed: bool, rationale: str).
     """
     if not reference_context or not reference_context.strip():
-        # If no context was retrievable, verify the LLM appropriately acknowledged limitation
         return True, "Standard medical limitation acknowledgment verified."
+
+    is_strict = guardrail_mode.strip().capitalize() == "Strict"
+    system_prompt = AUDITOR_STRICT_PROMPT if is_strict else AUDITOR_CALIBRATED_PROMPT
 
     try:
         llm = service.chat_llm
         audit_input = f"REFERENCE CONTEXT:\n{reference_context[:3000]}\n\nCANDIDATE ANSWER:\n{candidate_answer}\n\nAUDIT RESULT:"
         messages = [
-            SystemMessage(content=AUDITOR_SYSTEM_PROMPT),
+            SystemMessage(content=system_prompt),
             HumanMessage(content=audit_input)
         ]
         response = llm.invoke(messages).content.strip()
@@ -489,13 +534,23 @@ def verify_grounding_compliance(candidate_answer: str, reference_context: str) -
         return True, "Grounded in reference context."
 
 
-CONTROLLED_COMPLIANCE_REFUSAL = (
-    "⚠️ **COMPLIANCE REFUSAL NOTICE (CLINICAL SAFETY GUARDRAIL)**\n\n"
-    "This response was withheld by our Medical Safety Guardrail because key statements or metrics "
-    "could not be verified against the authenticated clinical reference context.\n\n"
-    "**Safety Advisory:** To eliminate risk of AI hallucinations regarding medication dosages, diagnostic "
-    "parameters, or specific metrics, please consult your primary physician or review the original laboratory records."
-)
+def get_compliance_refusal_notice(guardrail_mode: str = "Strict") -> str:
+    """Generates the appropriate compliance refusal card according to the active mode."""
+    if guardrail_mode.strip().capitalize() == "Strict":
+        return (
+            "⚠️ **COMPLIANCE REFUSAL NOTICE (STRICT SAFETY GUARDRAIL)**\n\n"
+            "This response was withheld by our Medical Safety Guardrail because **Strict Mode** requires "
+            "verbatim citation without extrapolation beyond the retrieved snippets.\n\n"
+            "💡 **Tip:** Switch to **Calibrated Mode** in the top bar if you would like an educational overview "
+            "of standard clinical treatment approaches and guideline options."
+        )
+    return (
+        "⚠️ **COMPLIANCE REFUSAL NOTICE (CLINICAL SAFETY GUARDRAIL)**\n\n"
+        "This response was withheld by our Medical Safety Guardrail because key statements or metrics "
+        "could not be verified against the authenticated clinical reference context.\n\n"
+        "**Safety Advisory:** To eliminate risk of AI hallucinations regarding medication dosages, diagnostic "
+        "parameters, or specific metrics, please consult your primary physician or review the original laboratory records."
+    )
 
 
 # ==============================================================================
@@ -600,11 +655,14 @@ def ask_question():
         data = request.get_json(silent=True) or {}
         question = data.get("question", "").strip()
         audience = data.get("audience", "Patient").strip()  # 'Patient' or 'Clinician'
+        guardrail_mode = (data.get("guardrail_mode") or "Calibrated").strip().capitalize()
+        if guardrail_mode not in ["Strict", "Calibrated"]:
+            guardrail_mode = "Calibrated"
 
         if not question:
             return jsonify({"error": "A clinical query or question is required."}), 400
 
-        print(f"\n[QUERY RECEIVED] Audience: {audience} | Question: {question}")
+        print(f"\n[QUERY RECEIVED] Audience: {audience} | Guardrail: {guardrail_mode} | Question: {question}")
 
         # ----------------------------------------------------------------------
         # STEP 1: UPSTREAM EMERGENCY TRIAGE ENGINE
@@ -619,6 +677,7 @@ def ask_question():
                 "question": question,
                 "answer": emergency_triage["message"],
                 "audience": audience,
+                "guardrail_mode": guardrail_mode,
                 "route": "EMERGENCY_TRIAGE_OVERRIDE",
                 "sources": [],
                 "compliance_verified": True,
@@ -648,23 +707,29 @@ def ask_question():
         # ----------------------------------------------------------------------
         # STEP 4: DUAL-PROMPT GENERATION
         # ----------------------------------------------------------------------
-        clinical_prompt = build_clinical_prompt(question, context, audience)
+        clinical_prompt = build_clinical_prompt(question, context, audience, guardrail_mode)
         llm = service.chat_llm
         raw_response = llm.invoke(clinical_prompt)
-        candidate_answer = raw_response.content if hasattr(raw_response, "content") else str(raw_response)
+        candidate_answer = (raw_response.content if hasattr(raw_response, "content") else str(raw_response)).strip()
 
         # ----------------------------------------------------------------------
         # STEP 5: POSTERIOR HALLUCINATION & COMPLIANCE GUARDRAIL
         # ----------------------------------------------------------------------
-        passed_audit, audit_rationale = verify_grounding_compliance(candidate_answer, context)
-        print(f"[COMPLIANCE AUDIT] Grounding check passed: {passed_audit} ({audit_rationale})")
-
-        final_answer = candidate_answer
-        hallucination_detected = False
-
-        if not passed_audit:
-            final_answer = CONTROLLED_COMPLIANCE_REFUSAL
+        if not candidate_answer:
+            final_answer = get_compliance_refusal_notice(guardrail_mode)
+            passed_audit = False
+            audit_rationale = "Candidate answer was withheld due to insufficient reference context under strict policy."
             hallucination_detected = True
+        else:
+            passed_audit, audit_rationale = verify_grounding_compliance(candidate_answer, context, guardrail_mode)
+            print(f"[COMPLIANCE AUDIT] Grounding check passed: {passed_audit} ({audit_rationale}) [Mode: {guardrail_mode}]", flush=True)
+
+            final_answer = candidate_answer
+            hallucination_detected = False
+
+            if not passed_audit:
+                final_answer = get_compliance_refusal_notice(guardrail_mode)
+                hallucination_detected = True
 
         return jsonify({
             "status": "success",
@@ -672,6 +737,7 @@ def ask_question():
             "question": question,
             "answer": final_answer,
             "audience": audience,
+            "guardrail_mode": guardrail_mode,
             "route": route,
             "sources": sources,
             "compliance_verified": passed_audit,

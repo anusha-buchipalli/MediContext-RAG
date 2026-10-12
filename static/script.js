@@ -23,6 +23,7 @@
 
     const state = {
         audience: "Patient", // 'Patient' or 'Clinician'
+        guardrailMode: "Calibrated", // 'Calibrated' or 'Strict'
         history: [], // Consultation state array containing all turns
         isRecording: false,
         mediaRecorder: null,
@@ -46,6 +47,8 @@
         // Mode switchers
         modePatientBtn: document.getElementById("mode-patient"),
         modeClinicianBtn: document.getElementById("mode-clinician"),
+        guardrailCalibratedBtn: document.getElementById("guardrail-calibrated"),
+        guardrailStrictBtn: document.getElementById("guardrail-strict"),
 
         // Chat stream & inputs
         streamContainer: document.getElementById("stream-container"),
@@ -153,6 +156,14 @@
         DOM.modePatientBtn.addEventListener("click", () => setAudienceMode("Patient"));
         DOM.modeClinicianBtn.addEventListener("click", () => setAudienceMode("Clinician"));
 
+        // Guardrail compliance mode switchers
+        if (DOM.guardrailCalibratedBtn) {
+            DOM.guardrailCalibratedBtn.addEventListener("click", () => setGuardrailMode("Calibrated"));
+        }
+        if (DOM.guardrailStrictBtn) {
+            DOM.guardrailStrictBtn.addEventListener("click", () => setGuardrailMode("Strict"));
+        }
+
         // Chat form submit
         DOM.chatForm.addEventListener("submit", handleChatSubmit);
 
@@ -244,6 +255,29 @@
             DOM.modePatientBtn.classList.remove("active");
             DOM.modePatientBtn.setAttribute("aria-selected", "false");
             DOM.userInput.placeholder = "Enter clinical differential, diagnostic pathology, ICD metric, or lab query...";
+        }
+    }
+
+    function setGuardrailMode(mode) {
+        state.guardrailMode = mode;
+        if (mode === "Calibrated") {
+            if (DOM.guardrailCalibratedBtn) {
+                DOM.guardrailCalibratedBtn.classList.add("active");
+                DOM.guardrailCalibratedBtn.setAttribute("aria-selected", "true");
+            }
+            if (DOM.guardrailStrictBtn) {
+                DOM.guardrailStrictBtn.classList.remove("active");
+                DOM.guardrailStrictBtn.setAttribute("aria-selected", "false");
+            }
+        } else {
+            if (DOM.guardrailStrictBtn) {
+                DOM.guardrailStrictBtn.classList.add("active");
+                DOM.guardrailStrictBtn.setAttribute("aria-selected", "true");
+            }
+            if (DOM.guardrailCalibratedBtn) {
+                DOM.guardrailCalibratedBtn.classList.remove("active");
+                DOM.guardrailCalibratedBtn.setAttribute("aria-selected", "false");
+            }
         }
     }
 
@@ -408,7 +442,8 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     question: question,
-                    audience: state.audience
+                    audience: state.audience,
+                    guardrail_mode: state.guardrailMode
                 })
             });
 
@@ -529,6 +564,7 @@
             question: question,
             answer: data.answer,
             audience: data.audience || state.audience,
+            guardrailMode: data.guardrail_mode || state.guardrailMode,
             route: data.route,
             sources: data.sources || [],
             triageEmergency: false,
@@ -566,6 +602,11 @@
         const complianceBadgeHtml = compliancePassed
             ? `<span class="badge-compliance compliance-pass">🛡️ GROUNDED IN CONTEXT</span>`
             : `<span class="badge-compliance compliance-fail">⚠️ COMPLIANCE REFUSAL</span>`;
+
+        const activeGuardrail = data.guardrail_mode || state.guardrailMode || "Calibrated";
+        const guardrailBadgeHtml = activeGuardrail === "Calibrated"
+            ? `<span class="badge-compliance badge-guardrail">💡 CALIBRATED (EDUCATIONAL)</span>`
+            : `<span class="badge-compliance badge-guardrail">🛡️ STRICT (VERBATIM)</span>`;
 
         const sources = data.sources || [];
         const hasSources = sources.length > 0;
@@ -618,6 +659,7 @@
                     <div class="ai-meta-badges">
                         <span class="badge-route ${routeClass}">${routeIcon} ${routeLabel}</span>
                         <span class="badge-audience">AUDIENCE: ${escapeHtml((data.audience || state.audience).toUpperCase())}</span>
+                        ${guardrailBadgeHtml}
                         ${complianceBadgeHtml}
                     </div>
                 </div>
@@ -758,6 +800,7 @@
         report += `AURA CLINICAL AI - MEDICAL CONSULTATION & DECISION SUPPORT AUDIT LOG\n`;
         report += `DOCUMENT GENERATION TIMESTAMP : ${now.toISOString()}\n`;
         report += `ACTIVE AUDIENCE PROFILE       : ${state.audience.toUpperCase()}\n`;
+        report += `ACTIVE COMPLIANCE GUARDRAIL   : ${state.guardrailMode.toUpperCase()}\n`;
         report += `TOTAL CONSULTATION TURNS      : ${state.history.length}\n`;
         report += `EMERGENCY TRIAGES ENCOUNTERED : ${state.sessionMetrics.emergencyTriaged}\n`;
         report += `DISCLAIMER: This document is an informational log of patient-AI interactions\n`;
@@ -766,7 +809,7 @@
 
         state.history.forEach((turn, idx) => {
             report += `[INTERACTION #${idx + 1}] | TIMESTAMP: ${turn.timestamp} | ROUTE: ${turn.route}\n`;
-            report += `AUDIENCE PROFILE: ${turn.audience}\n`;
+            report += `AUDIENCE PROFILE: ${turn.audience} | GUARDRAIL MODE: ${turn.guardrailMode || state.guardrailMode}\n`;
             report += `PATIENT INQUIRY:\n${turn.question}\n\n`;
             report += `CLINICAL SYNTHESIS:\n${turn.answer}\n\n`;
 
@@ -823,6 +866,7 @@
         const sessionPayload = {
             exportTimestamp: new Date().toISOString(),
             audienceMode: state.audience,
+            guardrailMode: state.guardrailMode,
             metrics: state.sessionMetrics,
             consultationHistory: state.history
         };
@@ -982,13 +1026,18 @@
         return html;
     }
 
-    // Export global helper for inline drawer toggling
+    // Export global helpers for runtime manipulation and testing
     window.AuraApp = {
         toggleSourcesDrawer: function (drawerId) {
             const drawer = document.getElementById(drawerId);
             if (drawer) {
                 drawer.classList.toggle("open");
             }
+        },
+        setAudienceMode: setAudienceMode,
+        setGuardrailMode: setGuardrailMode,
+        getState: function () {
+            return { ...state };
         }
     };
 
