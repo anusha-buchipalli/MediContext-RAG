@@ -1,186 +1,425 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Medical Chatbot</title>
-
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='style.css') }}"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AURA Clinical AI - Enterprise Decision Support & Medical RAG</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-
-
 <body>
-
-    <div class="app-container">
-
-        <!-- ==========================================
-             HEADER
-        =========================================== -->
-
-        <header class="header">
-
-            <div class="logo">
-                <span class="logo-icon">✚</span>
+    <div class="app-layout">
+        <!-- ============================================================
+             1. TOP ENTERPRISE CLINICAL NAVIGATION BAR
+        ============================================================ -->
+        <header class="top-navbar">
+            <div class="brand-group">
+                <div class="brand-mark">
+                    <svg class="pulse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                    </svg>
+                    <span class="live-ring"></span>
+                </div>
+                <div class="brand-titles">
+                    <div class="title-row">
+                        <h1 class="brand-title">AURA CLINICAL AI</h1>
+                        <span class="badge-version">v2.5 Enterprise</span>
+                    </div>
+                    <p class="brand-subtitle">Clinical Decision Support & Verified Medical RAG Platform</p>
+                </div>
             </div>
 
-            <div class="header-text">
-                <h1>Medical Chatbot</h1>
-
-                <p>
-                    AI-powered medical information assistant
-                </p>
+            <!-- Live Telemetry & Status Connection Indicators -->
+            <div class="telemetry-bar">
+                <div class="telemetry-item" id="system-status-indicator" title="System Health">
+                    <span class="indicator-dot dot-green"></span>
+                    <span class="telemetry-label">SYSTEM</span>
+                    <span class="telemetry-val" id="status-system-val">ONLINE</span>
+                </div>
+                <div class="telemetry-item" id="pinecone-indicator" title="Pinecone Vector Knowledge Base">
+                    <span class="indicator-dot dot-cyan"></span>
+                    <span class="telemetry-label">PINECONE RAG</span>
+                    <span class="telemetry-val" id="status-pinecone-val">11.8k VECTORS</span>
+                </div>
+                <div class="telemetry-item" id="groq-indicator" title="Inference Engine">
+                    <span class="indicator-dot dot-purple"></span>
+                    <span class="telemetry-label">INFERENCE</span>
+                    <span class="telemetry-val" id="status-groq-val">GROQ LPU</span>
+                </div>
+                <div class="telemetry-item" id="whisper-indicator" title="Speech-to-Text Pipeline">
+                    <span class="indicator-dot dot-emerald"></span>
+                    <span class="telemetry-label">VOICE</span>
+                    <span class="telemetry-val">WHISPER-V3</span>
+                </div>
             </div>
 
+            <!-- Utility Action Buttons -->
+            <div class="nav-actions">
+                <button id="btn-upload-pdf" class="btn-utility" title="Upload new medical report or PDF">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span>Upload PDF</span>
+                </button>
+                <button id="btn-export-log" class="btn-utility btn-export" title="Export clinical session log for physician">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Export Clinical Log</span>
+                </button>
+                <button id="btn-clear-chat" class="btn-utility btn-icon-only" title="Clear conversation">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+            </div>
         </header>
 
-
-        <!-- ==========================================
-             MAIN CHAT AREA
-        =========================================== -->
-
-        <main class="chat-container">
-
-            <section class="welcome-section">
-
-                <div class="medical-icon">
-                    🩺
+        <!-- ============================================================
+             2. AUDIENCE MODIFIER DOCK (PATIENT VS CLINICIAN)
+        ============================================================ -->
+        <section class="audience-dock">
+            <div class="dock-container">
+                <div class="mode-label-group">
+                    <span class="mode-badge">AUDIENCE ENGINE</span>
+                    <span class="mode-caption">Select target persona profile for contextual response calibration:</span>
                 </div>
-
-                <h2>
-                    How can I help you today?
-                </h2>
-
-                <p>
-                    Ask a question about medical conditions,
-                    symptoms, diseases, or general health
-                    information available in the medical
-                    knowledge base.
-                </p>
-
-            </section>
-
-
-            <!-- ======================================
-                 QUESTION FORM
-            ======================================= -->
-
-            <form id="chat-form">
-
-                <div class="input-container">
-
-                    <textarea
-                        id="question"
-                        name="question"
-                        rows="3"
-                        placeholder="Ask a medical question..."
-                        required
-                    ></textarea>
-
-                    <button
-                        id="submit-button"
-                        type="submit"
-                    >
-                        Ask Question
+                <div class="segmented-control" role="tablist">
+                    <button type="button" class="segment-btn active" id="mode-patient" role="tab" aria-selected="true" data-mode="Patient">
+                        <span class="segment-icon">👤</span>
+                        <span class="segment-text">
+                            <strong>Patient Mode</strong>
+                            <small>Empathetic &bull; Jargon-Free &bull; 8th-Grade Level</small>
+                        </span>
                     </button>
-
+                    <button type="button" class="segment-btn" id="mode-clinician" role="tab" aria-selected="false" data-mode="Clinician">
+                        <span class="segment-icon">🩺</span>
+                        <span class="segment-text">
+                            <strong>Clinician Mode</strong>
+                            <small>Diagnostic Precision &bull; ICD Codes &bull; Metrics</small>
+                        </span>
+                    </button>
                 </div>
+            </div>
+        </section>
 
-            </form>
+        <!-- ============================================================
+             3. PRIMARY TWO-PANE CLINICAL WORKSPACE
+        ============================================================ -->
+        <main class="main-workspace">
+            <!-- LEFT / CENTER WORKSPACE: CONSULTATION STREAM & INPUT -->
+            <section class="consultation-pane">
+                <div class="stream-container" id="stream-container">
+                    <!-- Initial Welcome Card -->
+                    <div class="welcome-card" id="welcome-card">
+                        <div class="welcome-header">
+                            <div class="welcome-icon-box">
+                                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
+                            </div>
+                            <div>
+                                <h2>Clinical Consultation Workspace</h2>
+                                <p class="welcome-desc">AURA combines localized vector search across patient clinical records with real-time verified search from authoritative medical repositories (NIH, WHO, CDC).</p>
+                            </div>
+                        </div>
 
+                        <div class="welcome-capabilities-grid">
+                            <div class="cap-item">
+                                <div class="cap-badge">FEATURE 01</div>
+                                <h4>Intent-Based Extent Router</h4>
+                                <p>Distinguishes internal document queries from general clinical health inquiries automatically.</p>
+                            </div>
+                            <div class="cap-item">
+                                <div class="cap-badge">FEATURE 02</div>
+                                <h4>Groq Whisper Voice Processing</h4>
+                                <p>High-accuracy voice intake tuned with medical terminology, drug names, and diagnostic phrasing.</p>
+                            </div>
+                            <div class="cap-item">
+                                <div class="cap-badge">FEATURE 03</div>
+                                <h4>Patient vs Clinician Dual-Prompt</h4>
+                                <p>Calibrates clinical nuance from reassuring plain language up to formal ICD diagnostic rigor.</p>
+                            </div>
+                            <div class="cap-item">
+                                <div class="cap-badge">FEATURE 04</div>
+                                <h4>Triage Engine & Compliance Guardrail</h4>
+                                <p>Immediate halt on life-threatening red-flag terms and posterior factual grounding audit.</p>
+                            </div>
+                        </div>
 
-            <!-- ======================================
-                 ANSWER SECTION
-            ======================================= -->
-
-            <section
-                id="answer-container"
-                class="answer-container hidden"
-            >
-
-                <div class="answer-header">
-
-                    <div class="answer-icon">
-                        ✚
+                        <div class="welcome-chips-container">
+                            <span class="chips-title">Suggested Clinical Inquiries:</span>
+                            <div class="chips-list">
+                                <button class="query-chip" data-query="What does the uploaded medical document indicate about blood sugar levels?">📑 "What does the document say about blood sugar?"</button>
+                                <button class="query-chip" data-query="What are the symptoms and diagnostic criteria for Type 2 Diabetes according to the CDC and WHO?">🌐 "CDC & WHO criteria for Type 2 Diabetes"</button>
+                                <button class="query-chip" data-query="What are the primary adverse reactions and pharmacological contraindications of Lisinopril?">🩺 "Pharmacological contraindications of Lisinopril"</button>
+                                <button class="query-chip chip-emergency" data-query="I am experiencing crushing chest pain radiating to my left arm.">⚠️ Test Emergency Triage Engine ("chest pain")</button>
+                            </div>
+                        </div>
                     </div>
 
-                    <h3>
-                        Medical Assistant
-                    </h3>
-
+                    <!-- Consultation Messages Stream Container -->
+                    <div class="messages-list" id="messages-list"></div>
                 </div>
 
+                <!-- Live Voice Recording Float Bar (Hidden by Default) -->
+                <div class="voice-floating-bar" id="voice-recording-bar">
+                    <div class="recording-visual">
+                        <span class="rec-dot"></span>
+                        <span class="rec-timer" id="recording-timer">00:00</span>
+                        <div class="rec-wave">
+                            <span class="bar bar-1"></span>
+                            <span class="bar bar-2"></span>
+                            <span class="bar bar-3"></span>
+                            <span class="bar bar-4"></span>
+                            <span class="bar bar-5"></span>
+                        </div>
+                    </div>
+                    <div class="recording-info">
+                        <span class="rec-status-text">Recording medical audio...</span>
+                        <small class="rec-hint">Groq Whisper-v3 medical lexicon engaged</small>
+                    </div>
+                    <div class="recording-controls">
+                        <button type="button" class="btn-rec-action btn-rec-cancel" id="btn-cancel-recording" title="Cancel recording">Cancel</button>
+                        <button type="button" class="btn-rec-action btn-rec-stop" id="btn-stop-recording" title="Stop and transcribe">Stop & Transcribe</button>
+                    </div>
+                </div>
 
-                <div
-                    id="answer"
-                    class="answer-content"
-                ></div>
+                <!-- Bottom Floating Input Dock -->
+                <div class="input-dock">
+                    <form id="chat-form" class="chat-form-box">
+                        <div class="input-main-row">
+                            <!-- Voice Input Trigger Button -->
+                            <button type="button" id="btn-mic-toggle" class="btn-mic" title="Record Voice Consultation (Groq Whisper v3)">
+                                <svg class="mic-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                            </button>
 
+                            <!-- Question Textarea -->
+                            <textarea 
+                                id="user-input" 
+                                name="question" 
+                                class="chat-textarea" 
+                                rows="1" 
+                                placeholder="Enter clinical inquiry, patient symptoms, or document query..." 
+                                required
+                            ></textarea>
+
+                            <!-- Send Inquiry Button -->
+                            <button type="submit" id="btn-send" class="btn-send" title="Send Inquiry (Enter)">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            </button>
+                        </div>
+                        <div class="input-footer-row">
+                            <div class="emergency-disclaimer">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                <span>Clinical Decision Support Only &bull; Not for acute emergencies (Call 911/112)</span>
+                            </div>
+                            <div class="keyboard-shortcuts">
+                                <kbd>Shift</kbd> + <kbd>Enter</kbd> newline &bull; <kbd>Enter</kbd> send
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </section>
 
+            <!-- RIGHT CLINICAL INTELLIGENCE & TELEMETRY SIDEBAR -->
+            <aside class="sidebar-pane">
+                <!-- Card 1: Intent Routing Monitor -->
+                <div class="sidebar-card">
+                    <div class="card-header">
+                        <div class="card-header-title">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                            <h3>Intent Routing Engine</h3>
+                        </div>
+                        <span class="card-badge" id="sidebar-route-badge">STANDBY</span>
+                    </div>
+                    <div class="routing-pipeline-diagram">
+                        <div class="pipeline-step step-triage">
+                            <span class="step-num">01</span>
+                            <div class="step-content">
+                                <span class="step-title">Triage Guardrail</span>
+                                <small>Upstream Red-Flag Screen</small>
+                            </div>
+                            <span class="step-status status-ok">ACTIVE</span>
+                        </div>
+                        <div class="pipeline-connector"></div>
+                        <div class="pipeline-step step-router">
+                            <span class="step-num">02</span>
+                            <div class="step-content">
+                                <span class="step-title">Intent Classifier</span>
+                                <small>LangChain Extent Decision</small>
+                            </div>
+                            <span class="step-status" id="step-router-status">READY</span>
+                        </div>
+                        <div class="pipeline-connector"></div>
+                        <div class="pipeline-branch">
+                            <div class="branch-item" id="branch-internal">
+                                <span class="branch-icon">📑</span>
+                                <div>
+                                    <strong>INTERNAL</strong>
+                                    <small>Pinecone Vector Index</small>
+                                </div>
+                            </div>
+                            <div class="branch-item" id="branch-external">
+                                <span class="branch-icon">🌐</span>
+                                <div>
+                                    <strong>EXTERNAL</strong>
+                                    <small>DuckDuckGo (NIH/WHO/CDC)</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pipeline-connector"></div>
+                        <div class="pipeline-step step-audit">
+                            <span class="step-num">03</span>
+                            <div class="step-content">
+                                <span class="step-title">Posterior Compliance</span>
+                                <small>Factual Grounding Audit</small>
+                            </div>
+                            <span class="step-status status-ok">ENFORCED</span>
+                        </div>
+                    </div>
+                </div>
 
-            <!-- ======================================
-                 LOADING SECTION
-            ======================================= -->
+                <!-- Card 2: Knowledge Base Telemetry -->
+                <div class="sidebar-card">
+                    <div class="card-header">
+                        <div class="card-header-title">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                            <h3>Active Knowledge Base</h3>
+                        </div>
+                    </div>
+                    <div class="kb-metrics-list">
+                        <div class="kb-metric">
+                            <span class="kb-label">Primary Document</span>
+                            <span class="kb-value">Medical_book.pdf</span>
+                        </div>
+                        <div class="kb-metric">
+                            <span class="kb-label">Vector Store</span>
+                            <span class="kb-value">Pinecone Serverless</span>
+                        </div>
+                        <div class="kb-metric">
+                            <span class="kb-label">Vector Dimension</span>
+                            <span class="kb-value">384 (MiniLM-L6-v2)</span>
+                        </div>
+                        <div class="kb-metric">
+                            <span class="kb-label">Active Namespace</span>
+                            <span class="kb-value" id="kb-namespace-val">medical</span>
+                        </div>
+                        <div class="kb-metric">
+                            <span class="kb-label">Total Chunks</span>
+                            <span class="kb-value" id="kb-chunks-val">11,821</span>
+                        </div>
+                    </div>
+                </div>
 
-            <section
-                id="loading"
-                class="loading-container hidden"
-            >
+                <!-- Card 3: Source Citations Inspector -->
+                <div class="sidebar-card" id="citations-sidebar-card">
+                    <div class="card-header">
+                        <div class="card-header-title">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <h3>Reference Citations</h3>
+                        </div>
+                        <span class="citations-count-pill" id="citations-count-pill">0 Sources</span>
+                    </div>
+                    <div class="citations-body" id="sidebar-citations-body">
+                        <div class="citations-empty-state">
+                            <p>No active citations yet. When you submit a clinical question, retrieved internal document excerpts or trusted NIH/CDC/WHO records will appear here.</p>
+                        </div>
+                    </div>
+                </div>
 
-                <div class="spinner"></div>
-
-                <p>
-                    Searching the medical knowledge base...
-                </p>
-
-            </section>
-
+                <!-- Card 4: Session Metrics & Compliance Log -->
+                <div class="sidebar-card">
+                    <div class="card-header">
+                        <div class="card-header-title">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                            <h3>Clinical Session Audit</h3>
+                        </div>
+                    </div>
+                    <div class="session-stats-grid">
+                        <div class="stat-box">
+                            <span class="stat-num" id="stat-query-count">0</span>
+                            <span class="stat-name">Inquiries</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-num" id="stat-route-internal">0</span>
+                            <span class="stat-name">Internal RAG</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-num" id="stat-route-external">0</span>
+                            <span class="stat-name">External DDG</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-num" id="stat-triage-count">0</span>
+                            <span class="stat-name">Emergency Triaged</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
         </main>
 
-
-        <!-- ==========================================
-             DISCLAIMER
-        =========================================== -->
-
-        <footer>
-
-            <div class="disclaimer">
-
-                <strong>Medical Information Notice</strong>
-
-                <p>
-                    This chatbot provides general information
-                    from its medical knowledge base and is not
-                    a substitute for professional medical
-                    advice, diagnosis, or treatment.
-                </p>
-
+        <!-- ============================================================
+             4. MODAL: PDF UPLOAD WORKSTATION
+        ============================================================ -->
+        <div class="modal-backdrop" id="modal-upload" style="display: none;">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <div class="modal-title-group">
+                        <div class="modal-icon">📑</div>
+                        <div>
+                            <h3>Ingest Clinical PDF Document</h3>
+                            <p>Upload a new medical record, lab report, or textbook into Pinecone vector index.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-modal-close" id="btn-close-upload-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="drop-zone" id="pdf-drop-zone">
+                        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <p class="drop-text">Drag & drop clinical PDF file here, or <span class="drop-highlight">browse files</span></p>
+                        <span class="drop-sub">Supported format: PDF up to 32MB</span>
+                        <input type="file" id="pdf-file-input" accept="application/pdf" style="display: none;">
+                    </div>
+                    <div class="file-preview-bar" id="file-preview-bar" style="display: none;">
+                        <span class="preview-filename" id="preview-filename">report.pdf</span>
+                        <span class="preview-filesize" id="preview-filesize">2.4 MB</span>
+                    </div>
+                    <div class="upload-progress-box" id="upload-progress-box" style="display: none;">
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" id="upload-progress-bar"></div>
+                        </div>
+                        <span class="progress-status-text" id="upload-progress-text">Processing document chunks and generating embeddings...</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modal-cancel" id="btn-cancel-upload">Cancel</button>
+                    <button type="button" class="btn-modal-primary" id="btn-submit-upload" disabled>Ingest into Knowledge Base</button>
+                </div>
             </div>
+        </div>
 
-            <p class="footer-text">
-                Medical RAG Assistant
-            </p>
-
-        </footer>
-
+        <!-- ============================================================
+             5. MODAL: CLINICAL SESSION EXPORT PREVIEW
+        ============================================================ -->
+        <div class="modal-backdrop" id="modal-export" style="display: none;">
+            <div class="modal-box modal-lg">
+                <div class="modal-header">
+                    <div class="modal-title-group">
+                        <div class="modal-icon">📋</div>
+                        <div>
+                            <h3>Physician Clinical Consultation Log</h3>
+                            <p>Structured summary of patient interactions, source citations, and audit verification.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-modal-close" id="btn-close-export-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <pre class="export-preview-pane" id="export-preview-pane"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modal-cancel" id="btn-copy-export">Copy to Clipboard</button>
+                    <button type="button" class="btn-modal-secondary" id="btn-download-json">Download JSON</button>
+                    <button type="button" class="btn-modal-primary" id="btn-download-txt">Download Formatted Report (.txt)</button>
+                </div>
+            </div>
+        </div>
     </div>
 
-
-    <!-- JavaScript -->
-
-    <script
-        src="{{ url_for('static', filename='script.js') }}"
-    ></script>
-
+    <!-- Application JavaScript Runtime -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
-
 </html>

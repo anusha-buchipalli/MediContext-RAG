@@ -1,14 +1,33 @@
-flask
-python-dotenv
+# ==============================================================================
+# Clinical AI Decision Support & Medical RAG System
+# Production-Grade Modular Dependencies
+# ==============================================================================
 
-langchain
-langchain-community
-langchain-core
-langchain-text-splitters
-langchain-huggingface
-langchain-openai
-langchain-pinecone
+# Core Web Framework & Production WSGI Runtime
+flask>=3.0.0
+werkzeug>=3.0.0
+waitress>=3.0.0
+python-dotenv>=1.0.1
+requests>=2.31.0
 
-pinecone
-pypdf
-sentence-transformers
+# LangChain Ecosystem & Core Components
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+langchain-text-splitters>=0.3.0
+
+# Model Providers & Vector Stores
+langchain-groq>=0.2.0
+langchain-pinecone>=0.2.0
+langchain-huggingface>=0.1.0
+groq>=0.11.0
+pinecone>=5.3.0
+
+# Medical External Search & Verification
+duckduckgo-search>=8.1.0
+ddgs>=9.16.0
+
+# Embeddings & PDF Processing
+sentence-transformers>=3.0.0
+pypdf>=4.0.0
+torch>=2.2.0

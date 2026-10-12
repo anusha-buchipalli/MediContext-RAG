@@ -28,19 +28,19 @@ def load_pdf_file(file_path: str):
     return documents
 
 
-def text_split(documents):
-    """
-    Split loaded documents into smaller overlapping chunks.
-    """
+def text_split(
+    documents,
+    chunk_size=500,
+    chunk_overlap=20
+):
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=20
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap
     )
 
     chunks = text_splitter.split_documents(documents)
 
     return chunks
-
 
 def download_hugging_face_embeddings():
     """
